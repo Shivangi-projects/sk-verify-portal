@@ -3,3 +3,6 @@ dist
 .env
 .DS_Storenode_modules
 .env
+
+.env
+node_modules
