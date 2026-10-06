@@ -22,13 +22,43 @@ export const createUser = async (
 
     const { userId, password, role, name } = req.body;
 
+    if (!userId || !password || !role || !name) {
+        return res.status(400).json({
+            message: "All fields are required"
+        });
+    }
+
+    if (
+        role !== "Admin" &&
+        role !== "General User"
+    ) {
+        return res.status(400).json({
+            message: "Invalid role"
+        });
+    }
+
+    const existingUser = users.find(
+        u => u.userId === userId
+    );
+
+    if (existingUser) {
+        return res.status(409).json({
+            message: "User ID already exists"
+        });
+    }
+
     const hashedPassword = await bcrypt.hash(
         password,
         10
     );
 
+    const highestId =
+        users.length > 0
+            ? Math.max(...users.map(u => u.id))
+            : 0;
+
     const newUser = {
-        id: users.length + 1,
+        id: highestId + 1,
         userId,
         password: hashedPassword,
         role,
@@ -41,7 +71,6 @@ export const createUser = async (
 
     res.status(201).json(safeUser);
 };
-
 export const updateUser = async (
     req: Request,
     res: Response
@@ -60,11 +89,22 @@ export const updateUser = async (
     }
 
     const { name, role } = req.body;
+    if (
+        role &&
+        role !== "Admin" &&
+        role !== "General User"
+    ) {
+        return res.status(400).json({
+            message: "Invalid role"
+        });
+    }
 
     user.name = name || user.name;
     user.role = role || user.role;
 
-    res.json(user);
+    const { password, ...safeUser } = user;
+
+    res.json(safeUser);
 };
 
 export const deleteUser = (

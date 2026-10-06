@@ -19,17 +19,33 @@ export const protect = (
 
     const token = authHeader.split(" ")[1];
 
+    if (typeof token !== "string") {
+        return res.status(401).json({
+            message: "No token provided"
+        });
+    }
+
     try {
 
         const decoded = jwt.verify(
             token,
             process.env.JWT_SECRET as string
-        ) as {
-            id: number;
-            role: string;
-        };
+        );
 
-        req.user = decoded;
+        if (
+            typeof decoded === "string" ||
+            !("id" in decoded) ||
+            !("role" in decoded)
+        ) {
+            return res.status(401).json({
+                message: "Invalid token"
+            });
+        }
+
+        req.user = {
+            id: decoded.id as number,
+            role: decoded.role as string
+        };
 
         next();
 

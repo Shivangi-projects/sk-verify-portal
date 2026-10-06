@@ -10,6 +10,12 @@ export const login = async (
 ) => {
     const { userId, password, role } = req.body;
 
+    if (!userId || !password || !role) {
+        return res.status(400).json({
+            message: "userId, password and role are required"
+        });
+    }
+
     const user = users.find(
         u =>
             u.userId === userId &&

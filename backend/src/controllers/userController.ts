@@ -31,7 +31,13 @@ export const getRecords = async (
     res: Response
 ) => {
 
-    const delay = Number(req.query.delay) || 0;
+    const delay = Math.min(
+        10000,
+        Math.max(
+            0,
+            Number(req.query.delay) || 0
+        )
+    );
 
     await new Promise(resolve =>
         setTimeout(resolve, delay)
