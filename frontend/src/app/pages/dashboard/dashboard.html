@@ -1,0 +1,41 @@
+<div class="container">
+
+    <h2>Dashboard</h2>
+
+    <div *ngIf="user">
+
+        <h3>User Details</h3>
+
+        <p><strong>Name:</strong> {{ user.name }}</p>
+        <p><strong>User ID:</strong> {{ user.userId }}</p>
+        <p><strong>Role:</strong> {{ user.role }}</p>
+
+    </div>
+
+    <h3>Records</h3>
+
+    <table border="1">
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Employee</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            <tr *ngFor="let record of records">
+
+                <td>{{ record.id }}</td>
+                <td>{{ record.employeeName }}</td>
+                <td>{{ record.verificationStatus }}</td>
+
+            </tr>
+
+        </tbody>
+
+    </table>
+
+</div>

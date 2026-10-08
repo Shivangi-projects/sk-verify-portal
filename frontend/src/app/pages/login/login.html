@@ -1,0 +1,25 @@
+<div class="login-container">
+
+    <h2>SK Verify Portal</h2>
+
+    <input type="text" placeholder="User ID" [(ngModel)]="userId" />
+
+    <input type="password" placeholder="Password" [(ngModel)]="password" />
+
+    <select [(ngModel)]="role">
+
+        <option value="General User">
+            General User
+        </option>
+
+        <option value="Admin">
+            Admin
+        </option>
+
+    </select>
+
+    <button (click)="onLogin()">
+        Login
+    </button>
+
+</div>
