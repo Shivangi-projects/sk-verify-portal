@@ -5,21 +5,19 @@
             <p>Manage portal accounts, roles, and access.</p>
         </div>
 
-        <button type="button" (click)="goToDashboard()">
-            Back to Dashboard
-        </button>
+        <button type="button" (click)="goToDashboard()">Back to Dashboard</button>
     </header>
 
-    <p *ngIf="errorMessage" class="error-message" role="alert">
-        {{ errorMessage }}
-    </p>
+    @if (errorMessage()) {
+    <p class="error-message" role="alert">{{ errorMessage() }}</p>
+    }
 
-    <p *ngIf="successMessage" class="success-message" role="status">
-        {{ successMessage }}
-    </p>
+    @if (successMessage()) {
+    <p class="success-message" role="status">{{ successMessage() }}</p>
+    }
 
     <section class="user-form">
-        <h2>{{ editingId !== null ? 'Edit User' : 'Create User' }}</h2>
+        <h2>{{ editingId() !== null ? 'Edit User' : 'Create User' }}</h2>
 
         <form (ngSubmit)="saveUser()">
             <label for="name">Full name</label>
@@ -27,14 +25,14 @@
                 placeholder="Enter full name" />
 
             <label for="userId">User ID</label>
-            <input id="userId" name="userId" [(ngModel)]="form.userId" required [readonly]="editingId !== null"
+            <input id="userId" name="userId" [(ngModel)]="form.userId" required [readonly]="editingId() !== null"
                 maxlength="50" placeholder="Enter unique user ID" />
 
-            <ng-container *ngIf="editingId === null">
-                <label for="password">Password</label>
-                <input id="password" name="password" type="password" [(ngModel)]="form.password" required
-                    autocomplete="new-password" placeholder="Enter password" />
-            </ng-container>
+            @if (editingId() === null) {
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" [(ngModel)]="form.password" required
+                autocomplete="new-password" placeholder="At least 6 characters" />
+            }
 
             <label for="role">Role</label>
             <select id="role" name="role" [(ngModel)]="form.role">
@@ -43,19 +41,13 @@
             </select>
 
             <div class="form-actions">
-                <button type="submit" [disabled]="saving">
-                    {{
-                    saving
-                    ? 'Saving...'
-                    : editingId !== null
-                    ? 'Update User'
-                    : 'Create User'
-                    }}
+                <button type="submit" [disabled]="saving()">
+                    {{ saving() ? 'Saving...' : editingId() !== null ? 'Update User' : 'Create User' }}
                 </button>
 
-                <button *ngIf="editingId !== null" type="button" (click)="cancelEdit()">
-                    Cancel
-                </button>
+                @if (editingId() !== null) {
+                <button type="button" (click)="cancelEdit()">Cancel</button>
+                }
             </div>
         </form>
     </section>
@@ -63,14 +55,15 @@
     <section class="user-list">
         <div class="list-header">
             <h2>Portal Users</h2>
-            <button type="button" (click)="loadUsers()" [disabled]="loading">
-                {{ loading ? 'Refreshing...' : 'Refresh' }}
+            <button type="button" (click)="loadUsers()" [disabled]="loading()">
+                {{ loading() ? 'Refreshing...' : 'Refresh' }}
             </button>
         </div>
 
-        <p *ngIf="loading">Loading users...</p>
-
-        <div class="table-wrapper" *ngIf="!loading">
+        @if (loading()) {
+        <p>Loading users...</p>
+        } @else {
+        <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
@@ -83,31 +76,28 @@
                 </thead>
 
                 <tbody>
-                    <tr *ngFor="let user of users">
-                        <td>{{ user.id }}</td>
-                        <td>{{ user.name }}</td>
-                        <td>{{ user.userId }}</td>
-                        <td>
-                            <span class="role-badge">{{ user.role }}</span>
-                        </td>
+                    @for (u of users(); track u.id) {
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td>{{ u.name }}</td>
+                        <td>{{ u.userId }}</td>
+                        <td><span class="role-badge">{{ u.role }}</span></td>
                         <td>
                             <div class="row-actions">
-                                <button type="button" (click)="startEdit(user)">
-                                    Edit
-                                </button>
-
-                                <button type="button" (click)="deleteUser(user)" [disabled]="user.id === 1">
-                                    Delete
-                                </button>
+                                <button type="button" (click)="startEdit(u)">Edit</button>
+                                <button type="button" (click)="deleteUser(u)"
+                                    [disabled]="u.id === currentUser()?.id">Delete</button>
                             </div>
                         </td>
                     </tr>
-
-                    <tr *ngIf="users.length === 0">
+                    } @empty {
+                    <tr>
                         <td colspan="5">No users found.</td>
                     </tr>
+                    }
                 </tbody>
             </table>
         </div>
+        }
     </section>
 </div>

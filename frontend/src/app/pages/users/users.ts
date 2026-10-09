@@ -1,196 +1,136 @@
-import { UserService } from '../../services/user';
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 
-
-interface User {
-  id: number;
-  userId: string;
-  name: string;
-  role: 'Admin' | 'General User';
-}
+import { Auth } from '../../services/auth';
+import { UserService } from '../../services/user';
+import { Role, User } from '../../models/user.model';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './users.html',
   styleUrl: './users.scss'
 })
 export class Users implements OnInit {
-  users: User[] = [];
+  private router = inject(Router);
+  private auth = inject(Auth);
+  private userService = inject(UserService);
 
-  loading = false;
-  saving = false;
-  errorMessage = '';
-  successMessage = '';
+  currentUser = this.auth.currentUser;
 
-  editingId: number | null = null;
+  users = signal<User[]>([]);
+  loading = signal(false);
+  saving = signal(false);
+  errorMessage = signal('');
+  successMessage = signal('');
+  editingId = signal<number | null>(null);
 
   form = {
     userId: '',
     password: '',
     name: '',
-    role: 'General User' as User['role']
+    role: 'General User' as Role
   };
 
-
-  constructor(
-    private router: Router,
-    private userService: UserService,
-    private cdr: ChangeDetectorRef
-  ) { }
-
   ngOnInit(): void {
-    if (typeof window === 'undefined') return;
-
-    if (!localStorage.getItem('token')) {
-      void this.router.navigate(['/']);
-      return;
-    }
-
-    void this.loadUsers();
+    this.loadUsers();
   }
 
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token') ?? ''}`
-    };
-  }
   goToDashboard(): void {
     void this.router.navigate(['/dashboard']);
   }
-  async loadUsers(): Promise<void> {
-    const token = localStorage.getItem('token');
 
-    if (!token) {
-      this.errorMessage = 'Session expired. Please log in again.';
-      this.loading = false;
-      this.cdr.detectChanges();
-      return;
-    }
+  loadUsers(): void {
+    this.loading.set(true);
+    this.errorMessage.set('');
 
-    this.loading = true;
-    this.errorMessage = '';
-    this.cdr.detectChanges();
-
-    try {
-      const users = await this.userService.getUsers(token);
-      this.users = users;
-    } catch (error) {
-      this.errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to load users.';
-    } finally {
-      this.loading = false;
-      this.cdr.detectChanges();
-    }
+    this.userService
+      .getUsers()
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (rows) => this.users.set(rows),
+        error: (err) =>
+          this.errorMessage.set(err.error?.message || 'Failed to load users.')
+      });
   }
 
-  async saveUser(): Promise<void> {
-    this.errorMessage = '';
-    this.successMessage = '';
+  saveUser(): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
 
     const userId = this.form.userId.trim();
     const name = this.form.name.trim();
     const password = this.form.password;
+    const editingId = this.editingId();
 
-    if (!name || (!this.editingId && (!userId || !password))) {
-      this.errorMessage = 'Please fill in all required fields.';
+    if (!name || (editingId === null && (!userId || !password))) {
+      this.errorMessage.set('Please fill in all required fields.');
       return;
     }
 
-    this.saving = true;
-
-    try {
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
-      if (this.editingId !== null) {
-        await this.userService.updateUser(token, this.editingId, {
-          name,
-          role: this.form.role
-        });
-
-        this.successMessage = 'User updated successfully.';
-      } else {
-        await this.userService.createUser(token, {
-          userId,
-          password,
-          name,
-          role: this.form.role
-        });
-
-        this.successMessage = 'User created successfully.';
-      }
-
-      this.cancelEdit();
-      await this.loadUsers();
-    } catch (error) {
-      this.errorMessage =
-        error instanceof Error ? error.message : 'Unable to save user.';
-    } finally {
-      this.saving = false;
+    if (editingId === null && password.length < 6) {
+      this.errorMessage.set('Password must be at least 6 characters.');
+      return;
     }
+
+    this.saving.set(true);
+
+    const request$ =
+      editingId !== null
+        ? this.userService.updateUser(editingId, { name, role: this.form.role })
+        : this.userService.createUser({ userId, password, name, role: this.form.role });
+
+    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.successMessage.set(
+          editingId !== null ? 'User updated successfully.' : 'User created successfully.'
+        );
+        this.cancelEdit();
+        this.loadUsers();
+      },
+      error: (err) =>
+        this.errorMessage.set(err.error?.message || 'Unable to save user.')
+    });
   }
 
   startEdit(user: User): void {
-    this.editingId = user.id;
+    this.editingId.set(user.id);
     this.form = {
       userId: user.userId,
       password: '',
       name: user.name,
       role: user.role
     };
-
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.errorMessage.set('');
+    this.successMessage.set('');
   }
 
   cancelEdit(): void {
-    this.editingId = null;
-    this.form = {
-      userId: '',
-      password: '',
-      name: '',
-      role: 'General User'
-    };
+    this.editingId.set(null);
+    this.form = { userId: '', password: '', name: '', role: 'General User' };
   }
 
-  async deleteUser(user: User): Promise<void> {
-    if (typeof window === 'undefined') return;
-
-    if (user.id === 1) {
-      this.errorMessage = 'The primary admin account cannot be deleted.';
+  deleteUser(user: User): void {
+    if (user.id === this.currentUser()?.id) {
+      this.errorMessage.set('You cannot delete your own account.');
       return;
     }
 
     if (!window.confirm(`Delete user "${user.name}"?`)) return;
 
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.errorMessage.set('');
+    this.successMessage.set('');
 
-    try {
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
-      await this.userService.deleteUser(token, user.id);
-
-      this.successMessage = 'User deleted successfully.';
-      await this.loadUsers();
-    } catch (error) {
-      this.errorMessage =
-        error instanceof Error ? error.message : 'Unable to delete user.';
-    }
+    this.userService.deleteUser(user.id).subscribe({
+      next: () => {
+        this.successMessage.set('User deleted successfully.');
+        this.loadUsers();
+      },
+      error: (err) =>
+        this.errorMessage.set(err.error?.message || 'Unable to delete user.')
+    });
   }
 }

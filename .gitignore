@@ -1,8 +1,5 @@
 node_modules
 dist
+.angular
 .env
-.DS_Storenode_modules
-.env
-
-.env
-node_modules
+.DS_Store

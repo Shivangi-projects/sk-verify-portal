@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import { AuthRequest } from "../types/AuthRequest";
 
 import { users } from "../data/users";
 
@@ -16,7 +17,7 @@ export const getUsers = (
 };
 
 export const createUser = async (
-    req: Request,
+    req: AuthRequest,
     res: Response
 ) => {
 
@@ -25,6 +26,12 @@ export const createUser = async (
     if (!userId || !password || !role || !name) {
         return res.status(400).json({
             message: "All fields are required"
+        });
+
+    }
+    if (String(password).length < 6) {
+        return res.status(400).json({
+            message: "Password must be at least 6 characters"
         });
     }
 
@@ -98,7 +105,13 @@ export const updateUser = async (
             message: "Invalid role"
         });
     }
+    const adminCount = users.filter(u => u.role === "Admin").length;
 
+    if (user.role === "Admin" && role === "General User" && adminCount === 1) {
+        return res.status(400).json({
+            message: "There must be at least one Admin"
+        });
+    }
     user.name = name || user.name;
     user.role = role || user.role;
 
@@ -108,7 +121,7 @@ export const updateUser = async (
 };
 
 export const deleteUser = (
-    req: Request,
+    req: AuthRequest,
     res: Response
 ) => {
 
@@ -123,7 +136,11 @@ export const deleteUser = (
             message: "User not found"
         });
     }
-
+    if (req.user?.id === id) {
+        return res.status(400).json({
+            message: "You cannot delete your own account"
+        });
+    }
     users.splice(index, 1);
 
     res.json({

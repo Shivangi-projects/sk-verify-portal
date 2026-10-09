@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { Auth } from '../../services/auth';
+import { Role } from '../../models/user.model';
 
 @Component({
   selector: 'app-login',
@@ -12,44 +13,52 @@ import { Auth } from '../../services/auth';
   styleUrl: './login.scss'
 })
 export class Login {
+  private auth = inject(Auth);
+  private router = inject(Router);
 
   userId = '';
   password = '';
-  role = 'General User';
+  role: Role = 'General User';
 
-  constructor(
-    private authService: Auth,
-    private router: Router
-  ) { }
+  loading = signal(false);
+  error = signal('');
+  fillDemo(type: 'admin' | 'user'): void {
+    if (type === 'admin') {
+      this.userId = 'admin';
+      this.password = 'admin123';
+      this.role = 'Admin';
+    } else {
+      this.userId = 'user1';
+      this.password = 'user123';
+      this.role = 'General User';
+    }
+  }
 
-  onLogin() {
+  onLogin(): void {
+    if (!this.userId.trim() || !this.password) {
+      this.error.set('Please enter your User ID and password.');
+      return;
+    }
 
-    this.authService.login({
-      userId: this.userId,
-      password: this.password,
-      role: this.role
-    }).subscribe({
-      next: (response: any) => {
+    this.loading.set(true);
+    this.error.set('');
 
-        localStorage.setItem(
-          'token',
-          response.token
-        );
-
-        localStorage.setItem(
-          'user',
-          JSON.stringify(response.user)
-        );
-
-        this.router.navigate(['/dashboard']);
-      },
-
-      error: (error) => {
-        alert(
-          error.error?.message ||
-          'Login failed'
-        );
-      }
-    });
+    this.auth
+      .login({
+        userId: this.userId.trim(),
+        password: this.password,
+        role: this.role
+      })
+      .subscribe({
+        next: () => {
+          void this.router.navigate(['/dashboard']);
+        },
+        error: (err) => {
+          this.loading.set(false);
+          this.error.set(
+            err.error?.message || 'Unable to reach the server. Please try again.'
+          );
+        }
+      });
   }
 }

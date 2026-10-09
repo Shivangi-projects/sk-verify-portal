@@ -4,38 +4,43 @@
         <h2>Dashboard</h2>
 
         <div class="dashboard-actions">
-            <button *ngIf="user?.role === 'Admin'" type="button" class="manage-users-btn" (click)="goToUsers()">
-                Manage Users
-            </button>
-
-            <button type="button" class="logout-btn" (click)="logout()">
-                Logout
-            </button>
+            @if (isAdmin()) {
+            <button type="button" class="manage-users-btn" (click)="goToUsers()">Manage Users</button>
+            }
+            <button type="button" class="logout-btn" (click)="logout()">Logout</button>
         </div>
     </header>
 
-    <div *ngIf="user" class="user-details">
+    @if (user(); as u) {
+    <section class="card user-details">
         <h3>User Details</h3>
-        <p><strong>Name:</strong> {{ user.name }}</p>
-        <p><strong>User ID:</strong> {{ user.userId }}</p>
-        <p><strong>Role:</strong> {{ user.role }}</p>
-    </div>
-    <div *ngIf="user?.role === 'Admin'" class="portal-users">
+        <p><strong>Name:</strong> {{ u.name }}</p>
+        <p><strong>User ID:</strong> {{ u.userId }}</p>
+        <p><strong>Role:</strong> <span class="badge">{{ u.role }}</span></p>
+        <p><strong>Access level:</strong>
+            {{ u.role === 'Admin' ? 'Full access: all employee records and user management' : 'Limited access: your own
+            verification documents' }}
+        </p>
+    </section>
+    }
+
+    @if (isAdmin()) {
+    <section class="card portal-users">
         <div class="section-heading">
             <h3>Portal Users</h3>
-
-            <button type="button" (click)="loadPortalUsers()" [disabled]="usersLoading">
-                {{ usersLoading ? 'Refreshing...' : 'Refresh Users' }}
+            <button type="button" class="secondary" (click)="loadPortalUsers()" [disabled]="loadingUsers()">
+                {{ loadingUsers() ? 'Refreshing...' : 'Refresh Users' }}
             </button>
         </div>
 
-        <p *ngIf="usersLoading">Loading portal users...</p>
+        @if (usersError()) {
+        <p class="alert error" role="alert">{{ usersError() }}</p>
+        }
 
-        <p *ngIf="usersError" class="error-message">
-            {{ usersError }}
-        </p>
-
-        <table *ngIf="!usersLoading && !usersError" border="1">
+        @if (loadingUsers()) {
+        @for (i of [1, 2, 3]; track i) { <div class="skeleton"></div> }
+        } @else if (!usersError()) {
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -44,60 +49,76 @@
                     <th>Role</th>
                 </tr>
             </thead>
-
             <tbody>
-                <tr *ngFor="let portalUser of portalUsers">
-                    <td>{{ portalUser.id }}</td>
-                    <td>{{ portalUser.name }}</td>
-                    <td>{{ portalUser.userId }}</td>
-                    <td>{{ portalUser.role }}</td>
+                @for (p of portalUsers(); track p.id) {
+                <tr>
+                    <td>{{ p.id }}</td>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.userId }}</td>
+                    <td><span class="badge">{{ p.role }}</span></td>
                 </tr>
-
-                <tr *ngIf="portalUsers.length === 0">
+                } @empty {
+                <tr>
                     <td colspan="4">No portal users found.</td>
                 </tr>
+                }
             </tbody>
         </table>
-    </div>
-    <div class="delay-control">
-        <label for="delay">Simulated API delay:</label>
-        <select id="delay" [(ngModel)]="delay">
-            <option *ngFor="let d of delayOptions" [ngValue]="d">{{ d / 1000 }} s</option>
-        </select>
-        <button type="button" (click)="loadRecords()" [disabled]="loading">Reload records</button>
-    </div>
-    <h3>Records</h3>
+        }
+    </section>
+    }
 
-    <div *ngIf="loading" class="loading-message">
-        <p>Loading records...</p>
-        <p>Please wait while we retrieve your records.</p>
-        <progress></progress>
-    </div>
+    <section class="card records">
+        <div class="section-heading">
+            <h3>Records</h3>
 
-    <div *ngIf="errorMessage" class="error-message">
-        {{ errorMessage }}
-    </div>
+            <div class="delay-control">
+                <label for="delay">Simulated API delay:</label>
+                <select id="delay" [(ngModel)]="delay">
+                    @for (d of delayOptions; track d) {
+                    <option [ngValue]="d">{{ d / 1000 }} s</option>
+                    }
+                </select>
+                <button type="button" (click)="loadRecords()" [disabled]="loadingRecords()">
+                    Reload records
+                </button>
+            </div>
+        </div>
 
-    <table *ngIf="!loading && !errorMessage" border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Employee / Document</th>
-                <th>Status</th>
-            </tr>
-        </thead>
+        @if (recordsError()) {
+        <p class="alert error" role="alert">{{ recordsError() }}</p>
+        }
 
-        <tbody>
-            <tr *ngFor="let record of records">
-                <td>{{ record.id }}</td>
-                <td>{{ record.employeeName || record.document }}</td>
-                <td>{{ record.verificationStatus || record.status }}</td>
-            </tr>
-
-            <tr *ngIf="records.length === 0">
-                <td colspan="3">No records found.</td>
-            </tr>
-        </tbody>
-    </table>
+        @if (loadingRecords()) {
+        <p>Loading records... the server is waiting {{ delay / 1000 }} s on purpose.</p>
+        @for (i of [1, 2, 3]; track i) { <div class="skeleton"></div> }
+        } @else if (!recordsError()) {
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Employee / Document</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (r of records(); track r.id) {
+                <tr>
+                    <td>{{ r.id }}</td>
+                    <td>{{ r.subject }}</td>
+                    <td>
+                        <span class="badge" [class.verified]="r.status === 'Verified'"
+                            [class.pending]="r.status === 'Pending'">{{ r.status }}</span>
+                    </td>
+                </tr>
+                } @empty {
+                <tr>
+                    <td colspan="3">No records found.</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        }
+    </section>
 
 </div>

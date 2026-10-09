@@ -1,25 +1,39 @@
-<div class="login-container">
+<main class="login-page">
+    <form class="login-card card" (ngSubmit)="onLogin()">
+        <div class="brand">
+            <span class="logo">SK</span>
+            <h1>SK Verify Portal</h1>
+            <p>Sign in to view and manage employee verifications</p>
+        </div>
 
-    <h2>SK Verify Portal</h2>
+        <label for="userId">User ID</label>
+        <input id="userId" name="userId" type="text" placeholder="Enter your User ID" autocomplete="username"
+            [(ngModel)]="userId" />
 
-    <input type="text" placeholder="User ID" [(ngModel)]="userId" />
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" placeholder="Enter your password"
+            autocomplete="current-password" [(ngModel)]="password" />
 
-    <input type="password" placeholder="Password" [(ngModel)]="password" />
+        <label for="role">Role</label>
+        <select id="role" name="role" [(ngModel)]="role">
+            <option value="General User">General User</option>
+            <option value="Admin">Admin</option>
+        </select>
 
-    <select [(ngModel)]="role">
+        @if (error()) {
+        <p class="alert error" role="alert">{{ error() }}</p>
+        }
 
-        <option value="General User">
-            General User
-        </option>
+        <button type="submit" [disabled]="loading()">
+            {{ loading() ? 'Signing in...' : 'Login' }}
+        </button>
 
-        <option value="Admin">
-            Admin
-        </option>
-
-    </select>
-
-    <button (click)="onLogin()">
-        Login
-    </button>
-
-</div>
+        <div class="demo">
+            <span>Demo accounts</span>
+            <div class="chips">
+                <button type="button" class="secondary" (click)="fillDemo('admin')">Admin</button>
+                <button type="button" class="secondary" (click)="fillDemo('user')">General User</button>
+            </div>
+        </div>
+    </form>
+</main>

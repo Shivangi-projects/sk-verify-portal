@@ -1,100 +1,28 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-const API_URL = 'http://localhost:5001/api/users';
+import { API_URL } from '../core/api.config';
+import { User, UserInput } from '../models/user.model';
 
-export interface User {
-    id: number;
-    userId: string;
-    name: string;
-    role: 'Admin' | 'General User';
-}
-
-export interface UserInput {
-    userId: string;
-    name: string;
-    password?: string;
-    role: 'Admin' | 'General User';
-}
-
-@Injectable({
-    providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class UserService {
-    private readonly apiUrl = API_URL;
+    private http = inject(HttpClient);
+    private readonly url = `${API_URL}/users`;
 
-    private getHeaders(token: string): HeadersInit {
-        return {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-        };
+    getUsers(): Observable<User[]> {
+        return this.http.get<User[]>(this.url);
     }
 
-    async getUsers(token: string): Promise<User[]> {
-        const response = await fetch(this.apiUrl, {
-            method: 'GET',
-            headers: this.getHeaders(token)
-        });
-
-        if (!response.ok) {
-            const result = await response.json().catch(() => ({}));
-
-            throw new Error(
-                result.message || `Unable to load users (${response.status}).`
-            );
-        }
-
-        const users: unknown = await response.json();
-
-        if (!Array.isArray(users)) {
-            throw new Error('Unexpected response received from the server.');
-        }
-
-        return users as User[];
+    createUser(data: UserInput): Observable<User> {
+        return this.http.post<User>(this.url, data);
     }
 
-    async createUser(token: string, data: UserInput): Promise<User> {
-        const response = await fetch(this.apiUrl, {
-            method: 'POST',
-            headers: this.getHeaders(token),
-            body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-            const result = await response.json().catch(() => ({}));
-            throw new Error(result.message || 'Unable to create user.');
-        }
-
-        return response.json();
+    updateUser(id: number, data: Partial<UserInput>): Observable<User> {
+        return this.http.put<User>(`${this.url}/${id}`, data);
     }
 
-    async updateUser(
-        token: string,
-        id: number,
-        data: Partial<UserInput>
-    ): Promise<User> {
-        const response = await fetch(`${this.apiUrl}/${id}`, {
-            method: 'PUT',
-            headers: this.getHeaders(token),
-            body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-            const result = await response.json().catch(() => ({}));
-            throw new Error(result.message || 'Unable to update user.');
-        }
-
-        return response.json();
-    }
-
-    async deleteUser(token: string, id: number): Promise<void> {
-        const response = await fetch(`${this.apiUrl}/${id}`, {
-            method: 'DELETE',
-            headers: this.getHeaders(token)
-        });
-
-        if (!response.ok) {
-            const result = await response.json().catch(() => ({}));
-            throw new Error(result.message || 'Unable to delete user.');
-        }
+    deleteUser(id: number): Observable<{ message: string }> {
+        return this.http.delete<{ message: string }>(`${this.url}/${id}`);
     }
 }

@@ -1,169 +1,83 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 
-interface PortalUser {
-  id: number;
-  userId: string;
-  name: string;
-  role: 'Admin' | 'General User';
-}
+import { Auth } from '../../services/auth';
+import { RecordService } from '../../services/record';
+import { UserService } from '../../services/user';
+import { User } from '../../models/user.model';
+import { VerificationRecord } from '../../models/record.model';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
 export class Dashboard implements OnInit {
-  user: any = null;
-  records: any[] = [];
-  portalUsers: PortalUser[] = [];
+  private auth = inject(Auth);
+  private router = inject(Router);
+  private recordService = inject(RecordService);
+  private userService = inject(UserService);
 
-  loading = true;
-  usersLoading = false;
+  user = this.auth.currentUser;
+  isAdmin = this.auth.isAdmin;
 
-  errorMessage = '';
-  usersError = '';
+  records = signal<VerificationRecord[]>([]);
+  portalUsers = signal<User[]>([]);
+
+  loadingRecords = signal(false);
+  loadingUsers = signal(false);
+  recordsError = signal('');
+  usersError = signal('');
+
   delay = 3000;
   delayOptions = [0, 3000, 5000, 8000];
 
-  constructor(
-    private cdr: ChangeDetectorRef,
-    private router: Router
-  ) { }
+  ngOnInit(): void {
+    // Both requests start together and finish independently (async processing).
+    this.loadRecords();
 
-  async ngOnInit(): Promise<void> {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      this.errorMessage = 'Please log in to continue.';
-      this.loading = false;
-      this.cdr.detectChanges();
-      return;
-    }
-
-    try {
-      const userRes = await fetch(
-        'http://localhost:5001/api/me',
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!userRes.ok) {
-        throw new Error('Could not load user details.');
-      }
-
-      this.user = await userRes.json();
-      this.cdr.detectChanges();
-
-      // Admins can also view the current portal users.
-      if (this.user?.role === 'Admin') {
-        await this.loadPortalUsers();
-      }
-
-      await this.loadRecords();
-    } catch (error) {
-      this.errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Something went wrong while loading the dashboard.';
-    } finally {
-      this.loading = false;
-      this.cdr.detectChanges();
+    if (this.isAdmin()) {
+      this.loadPortalUsers();
     }
   }
-  async loadRecords(): Promise<void> {
-    const token = localStorage.getItem('token');
-    if (!token) return;
 
-    this.loading = true;
-    this.errorMessage = '';
-    this.cdr.detectChanges();
+  loadRecords(): void {
+    this.loadingRecords.set(true);
+    this.recordsError.set('');
 
-    try {
-      const res = await fetch(
-        `http://localhost:5001/api/records?delay=${this.delay}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) throw new Error('Could not load records.');
-      this.records = await res.json();
-    } catch (e) {
-      this.errorMessage =
-        e instanceof Error ? e.message : 'Could not load records.';
-    } finally {
-      this.loading = false;
-      this.cdr.detectChanges();
-    }
-  }
-  async loadPortalUsers(): Promise<void> {
-    if (this.usersLoading) {
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      this.usersError = 'Session expired. Please log in again.';
-      this.usersLoading = false;
-      this.cdr.detectChanges();
-      return;
-    }
-
-    this.usersLoading = true;
-    this.usersError = '';
-    this.cdr.detectChanges();
-
-    try {
-      const response = await fetch('http://localhost:5001/api/users', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+    this.recordService
+      .getRecords(this.delay)
+      .pipe(finalize(() => this.loadingRecords.set(false)))
+      .subscribe({
+        next: (rows) => this.records.set(rows),
+        error: (err) =>
+          this.recordsError.set(err.error?.message || 'Could not load records.')
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Failed to load users (${response.status}).`
-        );
-      }
-
-      const data = await response.json();
-
-      if (!Array.isArray(data)) {
-        throw new Error('The server returned an unexpected users response.');
-      }
-
-      this.portalUsers = data;
-    } catch (error) {
-      this.usersError =
-        error instanceof Error
-          ? error.message
-          : 'Unable to load portal users. Please try again.';
-    } finally {
-      this.usersLoading = false;
-      this.cdr.detectChanges();
-    }
   }
 
-  logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    void this.router.navigate(['/']);
+  loadPortalUsers(): void {
+    this.loadingUsers.set(true);
+    this.usersError.set('');
+
+    this.userService
+      .getUsers()
+      .pipe(finalize(() => this.loadingUsers.set(false)))
+      .subscribe({
+        next: (rows) => this.portalUsers.set(rows),
+        error: (err) =>
+          this.usersError.set(err.error?.message || 'Could not load users.')
+      });
   }
 
   goToUsers(): void {
     void this.router.navigate(['/users']);
+  }
+
+  logout(): void {
+    this.auth.logout();
   }
 }
