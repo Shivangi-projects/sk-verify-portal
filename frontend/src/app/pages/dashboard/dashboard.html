@@ -2,9 +2,16 @@
 
     <header class="dashboard-header">
         <h2>Dashboard</h2>
-        <button type="button" class="logout-btn" (click)="logout()">
-            Logout
-        </button>
+
+        <div class="dashboard-actions">
+            <button *ngIf="user?.role === 'Admin'" type="button" class="manage-users-btn" (click)="goToUsers()">
+                Manage Users
+            </button>
+
+            <button type="button" class="logout-btn" (click)="logout()">
+                Logout
+            </button>
+        </div>
     </header>
 
     <div *ngIf="user" class="user-details">

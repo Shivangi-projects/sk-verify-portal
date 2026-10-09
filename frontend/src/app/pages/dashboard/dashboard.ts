@@ -84,4 +84,8 @@ export class Dashboard implements OnInit {
     localStorage.removeItem('user');
     void this.router.navigate(['/']);
   }
+
+  goToUsers(): void {
+    void this.router.navigate(['/users']);
+  }
 }
