@@ -51,12 +51,6 @@ Access is enforced in two independent layers:
 | **Secure logout** | Clears the stored token and user information and redirects to login. |
 
 
-
-
-| Login | Dashboard | User Management |
-|---|---|---|
-| ![Login](docs/screenshots/login.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Users](docs/screenshots/users.png) |
-
 ## Technology Stack
 
 | Layer | Technologies |
