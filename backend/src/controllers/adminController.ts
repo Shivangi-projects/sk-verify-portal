@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { AuthRequest } from "../types/AuthRequest";
 
-import { users } from "../data/users";
+import { users, saveUsers } from "../data/users";
 
 export const getUsers = (
     req: Request,
@@ -73,6 +73,7 @@ export const createUser = async (
     };
 
     users.push(newUser);
+    saveUsers();
 
     const { password: _, ...safeUser } = newUser;
 
@@ -114,6 +115,7 @@ export const updateUser = async (
     }
     user.name = name || user.name;
     user.role = role || user.role;
+    saveUsers();
 
     const { password, ...safeUser } = user;
 
@@ -142,6 +144,7 @@ export const deleteUser = (
         });
     }
     users.splice(index, 1);
+    saveUsers();
 
     res.json({
         message: "User deleted"

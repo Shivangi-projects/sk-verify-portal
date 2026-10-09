@@ -75,7 +75,7 @@ flowchart LR
     B --> C[Auth Middleware<br/>verify JWT]
     C --> D[Admin Middleware<br/>role check]
     D --> E[Controllers]
-    E --> F[(In-memory<br/>user store)]
+    E --> F[(JSON file<br/>user store)]
 ```
 
 **Login flow**
