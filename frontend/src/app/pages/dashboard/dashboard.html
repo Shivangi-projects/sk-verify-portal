@@ -11,11 +11,19 @@
         <p><strong>Role:</strong> {{ user.role }}</p>
 
     </div>
-
     <h3>Records</h3>
 
-    <table border="1">
+    <div *ngIf="loading" class="loading-message">
+        <p>Loading records...</p>
+        <p>Please wait while we retrieve your records.</p>
+        <progress></progress>
+    </div>
 
+    <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+    </div>
+
+    <table *ngIf="!loading && !errorMessage" border="1">
         <thead>
             <tr>
                 <th>ID</th>
@@ -25,17 +33,17 @@
         </thead>
 
         <tbody>
-
             <tr *ngFor="let record of records">
-
                 <td>{{ record.id }}</td>
                 <td>{{ record.employeeName }}</td>
                 <td>{{ record.verificationStatus }}</td>
-
             </tr>
 
+            <tr *ngIf="records.length === 0">
+                <td colspan="3">No records found.</td>
+            </tr>
         </tbody>
-
     </table>
+
 
 </div>

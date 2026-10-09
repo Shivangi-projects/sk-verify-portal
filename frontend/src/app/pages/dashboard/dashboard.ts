@@ -1,54 +1,78 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
+  imports: [CommonModule],
   templateUrl: './dashboard.html',
-  styleUrl: './dashboard.scss',
-  imports: [CommonModule]
+  styleUrl: './dashboard.scss'
 })
 export class Dashboard implements OnInit {
-
   user: any = null;
   records: any[] = [];
+  loading = true;
+  errorMessage = '';
 
-  async ngOnInit() {
+  constructor(private cdr: ChangeDetectorRef) { }
 
-    if (typeof window === 'undefined') return;
+  async ngOnInit(): Promise<void> {
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     const token = localStorage.getItem('token');
 
-    console.log('TOKEN = ', token);
+    if (!token) {
+      this.errorMessage = 'Please log in to continue.';
+      this.loading = false;
+      this.cdr.detectChanges();
+      return;
+    }
 
-    const userRes = await fetch(
-      'http://localhost:5001/api/me',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+    try {
+      const userRes = await fetch(
+        'http://localhost:5001/api/me',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
+      );
+
+      if (!userRes.ok) {
+        throw new Error('Could not load user details.');
       }
-    );
 
-    console.log('USER STATUS = ', userRes.status);
+      this.user = await userRes.json();
+      this.cdr.detectChanges();
 
-    this.user = await userRes.json();
+      // Show the loading indicator during simulated API processing.
+      this.loading = true;
+      this.cdr.detectChanges();
 
-    console.log('USER DATA = ', this.user);
-
-    const recordsRes = await fetch(
-      'http://localhost:5001/api/records?delay=3000',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+      const recordsRes = await fetch(
+        'http://localhost:5001/api/records?delay=3000',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
+      );
+
+      if (!recordsRes.ok) {
+        throw new Error('Could not load records.');
       }
-    );
 
-    console.log('RECORD STATUS = ', recordsRes.status);
-
-    this.records = await recordsRes.json();
-
-    console.log('RECORDS = ', this.records);
+      this.records = await recordsRes.json();
+    } catch (error) {
+      this.errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Something went wrong while loading the dashboard.';
+    } finally {
+      this.loading = false;
+      this.cdr.detectChanges();
+    }
   }
 }
