@@ -31,14 +31,25 @@ export class UserService {
 
     async getUsers(token: string): Promise<User[]> {
         const response = await fetch(this.apiUrl, {
+            method: 'GET',
             headers: this.getHeaders(token)
         });
 
         if (!response.ok) {
-            throw new Error('Unable to load users.');
+            const result = await response.json().catch(() => ({}));
+
+            throw new Error(
+                result.message || `Unable to load users (${response.status}).`
+            );
         }
 
-        return response.json();
+        const users: unknown = await response.json();
+
+        if (!Array.isArray(users)) {
+            throw new Error('Unexpected response received from the server.');
+        }
+
+        return users as User[];
     }
 
     async createUser(token: string, data: UserInput): Promise<User> {

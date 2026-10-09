@@ -64,21 +64,27 @@ export class Users implements OnInit {
     void this.router.navigate(['/dashboard']);
   }
   async loadUsers(): Promise<void> {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      this.errorMessage = 'Session expired. Please log in again.';
+      this.loading = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = '';
     this.cdr.detectChanges();
 
     try {
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
-      this.users = await this.userService.getUsers(token);
+      const users = await this.userService.getUsers(token);
+      this.users = users;
     } catch (error) {
       this.errorMessage =
-        error instanceof Error ? error.message : 'Unable to load users.';
+        error instanceof Error
+          ? error.message
+          : 'Failed to load users.';
     } finally {
       this.loading = false;
       this.cdr.detectChanges();

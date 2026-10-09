@@ -20,7 +20,52 @@
         <p><strong>User ID:</strong> {{ user.userId }}</p>
         <p><strong>Role:</strong> {{ user.role }}</p>
     </div>
+    <div *ngIf="user?.role === 'Admin'" class="portal-users">
+        <div class="section-heading">
+            <h3>Portal Users</h3>
 
+            <button type="button" (click)="loadPortalUsers()" [disabled]="usersLoading">
+                {{ usersLoading ? 'Refreshing...' : 'Refresh Users' }}
+            </button>
+        </div>
+
+        <p *ngIf="usersLoading">Loading portal users...</p>
+
+        <p *ngIf="usersError" class="error-message">
+            {{ usersError }}
+        </p>
+
+        <table *ngIf="!usersLoading && !usersError" border="1">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>User ID</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr *ngFor="let portalUser of portalUsers">
+                    <td>{{ portalUser.id }}</td>
+                    <td>{{ portalUser.name }}</td>
+                    <td>{{ portalUser.userId }}</td>
+                    <td>{{ portalUser.role }}</td>
+                </tr>
+
+                <tr *ngIf="portalUsers.length === 0">
+                    <td colspan="4">No portal users found.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="delay-control">
+        <label for="delay">Simulated API delay:</label>
+        <select id="delay" [(ngModel)]="delay">
+            <option *ngFor="let d of delayOptions" [ngValue]="d">{{ d / 1000 }} s</option>
+        </select>
+        <button type="button" (click)="loadRecords()" [disabled]="loading">Reload records</button>
+    </div>
     <h3>Records</h3>
 
     <div *ngIf="loading" class="loading-message">
@@ -37,7 +82,7 @@
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Employee</th>
+                <th>Employee / Document</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -45,8 +90,8 @@
         <tbody>
             <tr *ngFor="let record of records">
                 <td>{{ record.id }}</td>
-                <td>{{ record.employeeName }}</td>
-                <td>{{ record.verificationStatus }}</td>
+                <td>{{ record.employeeName || record.document }}</td>
+                <td>{{ record.verificationStatus || record.status }}</td>
             </tr>
 
             <tr *ngIf="records.length === 0">

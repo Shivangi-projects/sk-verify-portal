@@ -64,7 +64,7 @@
         <div class="list-header">
             <h2>Portal Users</h2>
             <button type="button" (click)="loadUsers()" [disabled]="loading">
-                Refresh
+                {{ loading ? 'Refreshing...' : 'Refresh' }}
             </button>
         </div>
 
