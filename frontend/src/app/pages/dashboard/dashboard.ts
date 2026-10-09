@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
@@ -14,7 +15,10 @@ export class Dashboard implements OnInit {
   loading = true;
   errorMessage = '';
 
-  constructor(private cdr: ChangeDetectorRef) { }
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private router: Router
+  ) { }
 
   async ngOnInit(): Promise<void> {
     if (typeof window === 'undefined') {
@@ -74,5 +78,10 @@ export class Dashboard implements OnInit {
       this.loading = false;
       this.cdr.detectChanges();
     }
+  }
+  logout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    void this.router.navigate(['/']);
   }
 }
